@@ -1,0 +1,27 @@
+# YOLOv8 Obstacle Detection Dataset Configuration
+
+# Path to dataset
+path: ./dataset  # dataset root dir
+train: images/train  # train images (relative to 'path')
+val: images/val  # val images (relative to 'path')
+
+# Classes
+names:
+  0: person
+  1: wall
+  2: stairs
+  3: door
+  4: chair
+  5: table
+  6: car
+  7: bicycle
+  8: motorcycle
+  9: bus
+  10: truck
+  11: pole
+  12: traffic light
+  13: fire hydrant
+  14: bench
+
+# Dataset configuration
+nc: 15  # number of classes

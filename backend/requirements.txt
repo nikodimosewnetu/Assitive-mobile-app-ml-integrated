@@ -1,0 +1,9 @@
+flask>=2.0.1
+flask-cors>=3.0.10
+opencv-python-headless>=4.5.3
+numpy>=1.21.2
+requests>=2.26.0
+ultralytics>=8.0.0
+tqdm>=4.62.3
+torch>=2.0.0
+torchvision>=0.15.0 
