@@ -64,6 +64,9 @@ KNOWN_WIDTHS = {
     'vase': 0.2,    # Average vase width
     'scissors': 0.1, # Average scissors width
     'toothbrush': 0.1, # Average toothbrush width
+    'wall': 0.2,    # Average wall thickness
+    'door': 1.0,    # Average door width
+    'stairs': 1.2,  # Average stairs width
 }
 
 # Ethiopian default location (Addis Ababa)
@@ -79,23 +82,26 @@ def get_priority(object_type):
         'bus': 1,
         'motorcycle': 1,
         'bicycle': 1,
-        'bench': 2,
-        'chair': 2,
-        'dining table': 2,
-        'potted plant': 3,
-        'tv': 3,
-        'laptop': 3,
-        'mouse': 3,
-        'remote': 3,
-        'keyboard': 3,
-        'cell phone': 3,
-        'book': 3,
-        'clock': 3,
-        'vase': 3,
-        'scissors': 3,
-        'toothbrush': 3,
+        'wall': 2,
+        'door': 2,
+        'stairs': 2,
+        'bench': 3,
+        'chair': 3,
+        'dining table': 3,
+        'potted plant': 4,
+        'tv': 4,
+        'laptop': 4,
+        'mouse': 4,
+        'remote': 4,
+        'keyboard': 4,
+        'cell phone': 4,
+        'book': 4,
+        'clock': 4,
+        'vase': 4,
+        'scissors': 4,
+        'toothbrush': 4,
     }
-    return priority_levels.get(object_type, 4)
+    return priority_levels.get(object_type, 5)
 
 def calculate_distance(pixel_width, object_type, focal_length):
     """Calculate distance using the formula: distance = (known_width * focal_length) / pixel_width"""
