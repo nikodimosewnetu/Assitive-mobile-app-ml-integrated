@@ -2,14 +2,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import '../config.dart';
+import 'dart:convert';
 
 class NetworkService {
   static const List<String> commonPorts = ['5000', '8000', '8080'];
   static const List<String> commonIPRanges = [
-    '192.168.1.',
-    '192.168.0.',
-    '10.0.0.',
-    '172.16.0.',
+    '192.168.138.', // Your network range first
   ];
 
   static String _formatUrl(String ip, String port) {
@@ -20,8 +18,15 @@ class NetworkService {
   static Future<String?> discoverBackendIP() async {
     print('Starting backend discovery...');
 
+    // First check internet connection
+    if (!await checkInternetConnection()) {
+      print('No internet connection available');
+      return null;
+    }
+
     // First try the configured IP
     String configuredUrl = Config.backendUrl.trim();
+    print('Testing configured URL: $configuredUrl');
     if (await _testConnection(configuredUrl)) {
       print('Found backend at configured URL: $configuredUrl');
       return configuredUrl;
@@ -29,7 +34,18 @@ class NetworkService {
 
     print('Configured URL not available, scanning network...');
 
-    // Try common IP ranges
+    // Try your specific IP first
+    String yourIP = '192.168.138.156';
+    for (String port in commonPorts) {
+      String url = _formatUrl(yourIP, port);
+      print('Trying your IP: $url');
+      if (await _testConnection(url)) {
+        print('Found backend at your IP: $url');
+        return url;
+      }
+    }
+
+    // Then try other ranges if needed
     for (String ipRange in commonIPRanges) {
       print('Scanning range: $ipRange');
       for (int i = 1; i <= 254; i++) {
@@ -51,12 +67,25 @@ class NetworkService {
 
   static Future<bool> _testConnection(String url) async {
     try {
-      // Ensure URL is properly formatted
       final uri = Uri.parse(url.trim());
       print('Testing connection to: $uri');
 
-      final response = await http.get(uri).timeout(const Duration(seconds: 1));
-      return response.statusCode == 200;
+      final response = await http
+          .get(uri)
+          .timeout(const Duration(seconds: Config.discoveryTimeout));
+
+      print('Response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        try {
+          final jsonResponse = json.decode(response.body);
+          print('Response body: $jsonResponse');
+          return jsonResponse['status'] == 'ok';
+        } catch (e) {
+          print('Error parsing response: $e');
+          return false;
+        }
+      }
+      return false;
     } on SocketException catch (e) {
       print('Socket error testing $url: $e');
       return false;
@@ -74,16 +103,31 @@ class NetworkService {
 
   static Future<bool> isBackendReachable() async {
     try {
+      if (!await checkInternetConnection()) {
+        print('No internet connection available');
+        return false;
+      }
+
       final url = Config.statusUrl.trim();
       print('Testing backend reachability at: $url');
 
       final uri = Uri.parse(url);
       final response = await http
           .get(uri)
-          .timeout(Duration(seconds: Config.connectionTimeout));
+          .timeout(const Duration(seconds: Config.connectionTimeout));
 
       print('Backend response: ${response.statusCode}');
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        try {
+          final jsonResponse = json.decode(response.body);
+          print('Response body: $jsonResponse');
+          return jsonResponse['status'] == 'ok';
+        } catch (e) {
+          print('Error parsing response: $e');
+          return false;
+        }
+      }
+      return false;
     } on SocketException catch (e) {
       print('Socket error checking backend: $e');
       return false;
@@ -113,6 +157,11 @@ class NetworkService {
     Object? body,
     int maxRetries = 3,
   }) async {
+    // First check internet connection
+    if (!await checkInternetConnection()) {
+      throw Exception('No internet connection available');
+    }
+
     int retryCount = 0;
     Duration delay = const Duration(seconds: 1);
 
@@ -132,12 +181,12 @@ class NetworkService {
           case 'GET':
             response = await http
                 .get(uri, headers: headers)
-                .timeout(Duration(seconds: Config.connectionTimeout));
+                .timeout(const Duration(seconds: Config.connectionTimeout));
             break;
           case 'POST':
             response = await http
                 .post(uri, headers: headers, body: body)
-                .timeout(Duration(seconds: Config.connectionTimeout));
+                .timeout(const Duration(seconds: Config.connectionTimeout));
             break;
           default:
             throw Exception('Unsupported HTTP method: $method');
@@ -177,5 +226,40 @@ class NetworkService {
     } on SocketException catch (_) {
       return false;
     }
+  }
+
+  // New method to diagnose network issues
+  static Future<Map<String, dynamic>> diagnoseNetworkIssues() async {
+    Map<String, dynamic> diagnosis = {
+      'internet_connection': false,
+      'backend_reachable': false,
+      'configured_url': Config.backendUrl,
+      'errors': [],
+    };
+
+    try {
+      // Check internet connection
+      diagnosis['internet_connection'] = await checkInternetConnection();
+      if (!diagnosis['internet_connection']) {
+        diagnosis['errors'].add('No internet connection available');
+        return diagnosis;
+      }
+
+      // Check backend reachability
+      diagnosis['backend_reachable'] = await isBackendReachable();
+      if (!diagnosis['backend_reachable']) {
+        diagnosis['errors'].add('Backend server is not reachable');
+      }
+
+      // Try to discover backend
+      String? discoveredUrl = await discoverBackendIP();
+      if (discoveredUrl != null) {
+        diagnosis['discovered_url'] = discoveredUrl;
+      }
+    } catch (e) {
+      diagnosis['errors'].add('Diagnosis error: $e');
+    }
+
+    return diagnosis;
   }
 }
