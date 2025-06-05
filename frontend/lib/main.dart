@@ -3,7 +3,6 @@ import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
@@ -589,7 +588,7 @@ class NavigationScreenState extends State<NavigationScreen>
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'image': base64Image}),
           )
-          .timeout(Duration(seconds: Config.requestTimeout));
+          .timeout(const Duration(seconds: Config.requestTimeout));
 
       print('Detection response: ${response.statusCode}');
 
@@ -694,7 +693,7 @@ class NavigationScreenState extends State<NavigationScreen>
     try {
       final response = await http
           .get(Uri.parse(Config.statusUrl))
-          .timeout(Duration(seconds: Config.connectionTimeout));
+          .timeout(const Duration(seconds: Config.connectionTimeout));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -793,7 +792,7 @@ class NavigationScreenState extends State<NavigationScreen>
         }
 
         // Validate response data
-        if (data['route'] == null || !(data['route'] is List)) {
+        if (data['route'] == null || data['route'] is! List) {
           throw Exception('Invalid route data received from server');
         }
 
